@@ -2314,7 +2314,7 @@ Note: [NCCL==2.14.3 coming with `pytorch==1.13` hangs](https://github.com/NVIDIA
 `CUDA_VISIBLE_DEVICES=""` and `CUDA_LAUNCH_BLOCKING=1` from the previous section give you an in-context Python traceback that points at *which* operator failed - but they can't see *inside* a CUDA kernel. When the bug is a bad memory access, a race, or use of uninitialized device memory, NVIDIA's `compute-sanitizer` (ships with the CUDA toolkit; it replaced the old `cuda-memcheck`) instruments the kernel and reports the offending access.
 
 It has four sub-tools, selected with `--tool`:
-- `memcheck` (the default) - out-of-bounds and misaligned device memory accesses, and leaks.
+- `memcheck` (the default) - out-of-bounds and misaligned device memory accesses, and, with `--leak-check full`, device memory that was never freed.
 - `racecheck` - shared-memory data races between threads of a block.
 - `initcheck` - reads of uninitialized device global memory.
 - `synccheck` - invalid `__syncthreads()` / barrier use.
@@ -2326,6 +2326,8 @@ compute-sanitizer --tool memcheck python my-program.py
 ```
 
 Every kernel is instrumented, so expect a large slowdown; narrow to a single reproducing step and use `--launch-count`/`--launch-skip` to check only the suspect launches.
+
+Leak reporting is off unless you ask for it, and its absence is indistinguishable from a clean run - without `--leak-check full` a program that allocates a megabyte and never frees it still finishes with `ERROR SUMMARY: 0 errors`. Turning it on comes with a caveat on PyTorch: the caching allocator is still holding its segments when the process exits, and each one is reported as a leak. A correct script that allocates a single small tensor reports `LEAK SUMMARY: 2097156 bytes leaked in 2 allocations` - a 2MiB allocator segment plus a 4-byte block. Dropping your references and calling `torch.cuda.empty_cache()` before exit releases the segment and leaves only the 4 bytes, which is a quick way to tell your own leak from the allocator's bookkeeping.
 
 First, when you *don't* need it: modern PyTorch's own indexing / gather / scatter / take kernels bounds-check on the device and `assert`, so a stray index aborts with a clear message, e.g.
 
