@@ -110,6 +110,24 @@ For example it suggests:
 
 If after a reboot the same condition occurs for the same memory address, memory remapping has failed and Xid 64 is emitted. If it keeps happening after reboot, the GPU needs to be RMA'ed.
 
+When that happens it shows up in the same `Remapped Rows` block as above, with the failure flag set and a bank that has run out of spares. This is [Crusoe Cloud's published signature](https://docs.crusoecloud.com/resources/troubleshooting) for a GPU that qualifies for replacement:
+
+```
+Remapped Rows
+        Correctable Error                 : 0
+        Uncorrectable Error               : 0
+        Pending                           : No
+        Remapping Failure Occurred        : Yes
+        Bank Remap Availability Histogram
+            Max                           : 639 bank(s)
+            High                          : 0 bank(s)
+            Partial                       : 0 bank(s)
+            Low                           : 0 bank(s)
+            None                          : 1 bank(s)
+```
+
+Note that not a single row was remapped successfully, yet a failure has been recorded, and one bank sits at `None` - it has no reserved rows left to remap into. That combination is what distinguishes a GPU that needs replacing from one that just needs a reset. To read only this block rather than the whole report, use `nvidia-smi -q -d ROW_REMAPPER`.
+
 At other times you may get Xid 63 or 64 and the application will crash, which usually generates additional Xid errors, but most of the time it means that the error was uncorrectable (i.e. it was a DBE sort of an error and then it'll be Xid 48).
 
 As mentioned earlier to reset a GPU you can either simply reboot the machine, or run:
@@ -311,6 +329,34 @@ GPU 0: NVIDIA H100 80GB HBM3 (UUID: GPU-abcdefab-cdef-abdc-abcd-abababababab)
 this one tells you the current speed of each link
 
 Run `nvidia-smi nvlink -h` to discover more features (reporting, resetting counters, etc.).
+
+
+### How to check GPU memory row-remapping health
+
+Row remapping is how Ampere and later GPUs deal with memory that has gone bad - a degrading bank row is replaced by one of the spares that every HBM bank reserves for the purpose. It is [NVIDIA's replacement for the page retirement scheme](https://docs.nvidia.com/deploy/a100-gpu-mem-error-mgmt/latest/row-remapping.html) used by earlier generations, with a much larger budget: up to 512 remappings for the frame buffer, against 64 retirements before it. [Xid Errors](#xid-errors) covers what this looks like once a GPU has thrown an Xid 63 or 64 - this section is about checking it deliberately, before a job dies.
+
+That section reads the state out of `nvidia-smi -q`, which prints a long block per GPU. For checking a whole node there is a CSV query that gives one line per GPU instead:
+
+```bash
+$ nvidia-smi --query-remapped-rows=gpu_name,gpu_bus_id,remapped_rows.failure,remapped_rows.pending,remapped_rows.correctable,remapped_rows.uncorrectable --format=csv
+gpu_name, gpu_bus_id, remapped_rows.failure, remapped_rows.pending, remapped_rows.correctable, remapped_rows.uncorrectable
+NVIDIA H200, 00000000:59:00.0, No, No, 0, 0
+[...]
+NVIDIA H200, 00000000:A5:00.0, No, No, 0, 0
+```
+
+That is a healthy node - no failures, nothing pending, no rows remapped. To see the other end of it, [Xid Errors](#xid-errors) shows the same fields from a GPU whose row remapping has failed. Reading a report that isn't all `No` and `0`:
+
+- `correctable` and `uncorrectable` count the rows that have already been remapped, after repeated SBEs and after a DBE respectively. A non-zero count is not by itself a reason to pull the GPU out of service - it means the sparing did its job.
+- `pending: Yes` means a remap has been decided but doesn't take effect until the GPU is reset, and it does not put the running job at risk of touching the bad cell. It does change how much memory that GPU has, though: when the trigger was an uncorrectable error the driver offlines the page containing it immediately, and that page stays out of the allocatable pool until the reset remaps the row in hardware and hands the address space back - so a job sized to fill HBM can start hitting OOM on this GPU while still fitting on a healthy one.
+- `failure: Yes` means a remap was attempted and did not succeed. This is the one that means RMA rather than reset-and-return.
+
+The same fields are available from `--query-gpu` if you want them alongside other per-GPU columns, e.g. `nvidia-smi --query-gpu=gpu_bus_id,remapped_rows.pending,remapped_rows.failure --format=csv`.
+
+Hint: for the full field list, including the `remapped_rows.sbe`/`.dbe` aliases, run:
+```bash
+nvidia-smi --help-query-remapped-rows
+```
 
 
 ### How to detect if a node is missing GPUs
