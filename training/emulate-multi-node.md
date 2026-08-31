@@ -382,7 +382,7 @@ And with only 2 ranks, `3g.71gb` instances are actually *faster* than 2 whole GP
 
 ### Spreading the instances over 2 GPUs
 
-Until NVIDIA overcomes the odd 7-instance per GPU limit, if you want to do a [3D parallelism](model-parallelism#dppptp), you need at least 8 GPUs or instances. So for a time being we have to use 2 GPUs to get to 8.
+Until NVIDIA overcomes the odd [7-instance per GPU limit](#only-7-instances-per-gpu), if you want to do a [3D parallelism](model-parallelism#dppptp), you need at least 8 GPUs or instances. So for a time being we have to use 2 GPUs to get to 8.
 
 Everything above keeps the whole emulated world inside one physical GPU. Partitioning 2 GPUs into 4 instances each gives 8 ranks, and the setup plus the benchmark is:
 
@@ -505,6 +505,14 @@ node_slot = int(os.environ.get("MIG_SLOT", os.environ["LOCAL_RANK"]))
 if node_slot == 0:
     download_dataset()
 ```
+
+#### Only 7 instances per GPU
+
+MIG cuts along boundaries the silicon already has. A compute slice comes from a GPC (Graphics Processing Cluster), the top-level block that bundles a set of SMs with its own work distribution, and a memory slice comes from the memory system attached to the HBM stacks. Ampere and Hopper, whose die layouts are public, are both built with 8 GPCs - GA100 as 8 GPCs of 8 TPCs, GH100 as 8 GPCs of 9 TPCs for 144 SMs on the full die - so the natural partitioning would be 8 by 8. Blackwell and Rubin aren't documented in that detail, but they are most likely similar, despite the packages now having 2 dies instead of one.
+
+It is max 7 and not 8 because the eighth compute unit is reserved to manage the instances - it is held back the moment MIG mode is enabled, whether you then create 7 instances or one. The memory system has no such tenant, so all 8 memory slices stay available, and the MIG documentation states the resulting ratio outright: each memory slice is 1/8 of the memory, each SM slice is 1/7 of the SMs.
+
+That asymmetry is what the profile table above shows. Seven `1g` instances consume all 7 compute slices but only 7 of the 8 memory slices, so one slice worth of HBM is stranded on a fully partitioned GPU - 18GB of the H200's 141GB. It is also why a `4g` profile allows just one instance: a second would need 8 compute slices and there are only 7.
 
 #### `torch.cuda.device_count()` disagrees with `LOCAL_WORLD_SIZE`
 
