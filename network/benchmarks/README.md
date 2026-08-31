@@ -36,6 +36,12 @@ And it also creates a plot:
 
 ![all-reduce-bench-plot 4 nodes](images/all-reduce-bench-plot-4n.png)
 
+Here is the same benchmark on a single 8x H200 node (`torch=2.9.1+cu130`, `cuda=13.0`, `nccl=2.27.7`, 5 warmup and 20 trial iterations per payload, 47 seconds for the whole sweep):
+
+![all-reduce-bench-plot 8x H200](images/all-reduce-bench-plot-8xh200.png)
+
+Note the linear y-axis compresses everything below ~100GBps into the bottom of the plot, so the small-payload end - the part that matters for gradient bucketing - is easier to read off the printed table than off the curve. That sweep tops out at 482.26GBps, which is *above* the 450GBps unidirectional [NVLink 4](../README.md#nvlink) spec rather than below it; see [SHARP](../README.md#sharp) for why, and for what the same node measures with it disabled.
+
 For launching examples and notes please see the top of [all_reduce_bench.py](all_reduce_bench.py).
 
 This table should give a good sense for what scores you should expect for all-reduce collective on a well-tuned network (left is intra-node and right is inter-node):
@@ -57,6 +63,46 @@ To check the stability of all-reduce over time, rather than averaging the result
 ### all_reduce latency comparison
 
 [all_reduce_latency_comp.py](all_reduce_latency_comp.py) - exemplifies how 1x 4GB reduction is much faster than 1000x 4MB reductions.
+
+### nccl-tests
+
+[NVIDIA/nccl-tests](https://github.com/NVIDIA/nccl-tests) benchmarks collectives - `all-reduce`, `all-gather`, `reduce-scatter` and the rest. It reports the same `busbw`/`algbw` columns as [all_reduce_bench.py](all_reduce_bench.py) and the two agree closely, but it covers every collective rather than just `all-reduce`.
+
+`MPI=0` is fine for a single node, and `NCCL_HOME` points at whichever NCCL you want to test - the one bundled with PyTorch being the convenient choice, since that is what your training will actually use:
+
+```bash
+git clone https://github.com/NVIDIA/nccl-tests
+cd nccl-tests
+make -j MPI=0 NCCL_HOME=$(python -c "import torch, os; print(os.path.dirname(torch.__file__) + '/lib')")
+```
+
+That puts one binary per collective under `build/` - `all_reduce_perf`, `all_gather_perf`, `reduce_scatter_perf`, `alltoall_perf` and others. If they fail to find `libnccl` at run time, add the same directory to `LD_LIBRARY_PATH`. Add `-z 1` for a blocking run, which matches how `all_reduce_bench.py` measures.
+
+### nvbandwidth
+
+[NVIDIA/nvbandwidth](https://github.com/NVIDIA/nvbandwidth) measures point-to-point bandwidth between hosts and accelerators - the closest thing to a direct reading of a single link, as opposed to a collective's aggregate:
+
+```bash
+git clone https://github.com/NVIDIA/nvbandwidth
+cd nvbandwidth
+cmake . && make
+```
+
+Run it with no arguments for the full sweep, `./nvbandwidth -l` to list the testcases, or `-t <testcase>` to run just one. `-i N` raises the iteration count from its default of 3.
+
+note: `host_to_device_memcpy_ce` measures whatever the host-to-device path happens to be on that platform - PCIe on an x86 host with PCIe-attached accelerators, NVLink-C2C on a Grace-Blackwell system. Same command, an order of magnitude apart, so read the number against the fabric the machine actually uses.
+
+### p2pBandwidthLatencyTest
+
+[p2pBandwidthLatencyTest](https://github.com/NVIDIA/cuda-samples/tree/master/cpp/5_Domain_Specific/p2pBandwidthLatencyTest) from CUDA samples is a low-level accelerator-to-accelerator benchmark:
+
+```bash
+git clone https://github.com/NVIDIA/cuda-samples/
+cd cuda-samples/cpp/5_Domain_Specific/p2pBandwidthLatencyTest
+nvcc -o p2pBandwidthLatencyTest p2pBandwidthLatencyTest.cu -I ../../../Common
+```
+
+note: this repository reorganized its layout - the samples used to live under `Samples/` and are now under `cpp/`. If the `cd` fails, `find . -name p2pBandwidthLatencyTest.cu` will locate it. `Common` is still at the repository root, so the `-I` path is unchanged.
 
 
 
@@ -114,14 +160,14 @@ Notes:
 Here is how to launch it in a SLURM env with 4 nodes:
 ```bash
 salloc --partition=mypartition --nodes=4 --ntasks-per-node=1 --cpus-per-task=48 --gres=gpu:8 --time=1:00:00 bash
-srun --gres=gpu:8 --nodes=4 --tasks-per-node=1 python -u -m torch.distributed.run --nproc_per_node=8 --nnodes 4 --rdzv_endpoint $(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1):6000 --rdzv_backend c10d all_reduce_bench.py
+srun --cpus-per-task=$SLURM_CPUS_PER_TASK --gres=gpu:8 --nodes=4 --tasks-per-node=1 python -u -m torch.distributed.run --nproc_per_node=8 --nnodes 4 --rdzv_endpoint $(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1):6000 --rdzv_backend c10d all_reduce_bench.py
 ```
 
 Notes:
 - You are likely to need to adapt `--cpus-per-task` and `--partition` arguments there.
 - You do `salloc` once and then can repeat `srun` multiple times on the same allocation.
 
-You may get results anywhere between 5Gbps and 1600Gbps (as of this writing). The minimal speed to prevent being network bound will depend on your particular training framework, but typically you'd want at least 400Gbps or higher. Though we trained BLOOM on 50Gbps.
+You may get results anywhere between 5Gbps and 6800Gbps (as of 2026-08), and the payload size matters as much as the hardware does - `busbw` climbs by orders of magnitude from a small payload to a large one on the very same setup. In the measured tables under [Inter-node speed depends on intra-node speed](../README.md#inter-node-speed-depends-on-intra-node-speed), at a 16GiB payload a single B200 node reaches 845.67GBps and four nodes 381.80GBps - about 6800Gbps and 3050Gbps - while at 32KiB those same runs report 1.20GBps and 0.01GBps. So always compare like payload with like. The minimal speed to prevent being network bound will depend on your particular training framework, but typically you'd want at least 400Gbps or higher. Though we trained BLOOM on 50Gbps.
 
 Frameworks that shard weights and optim stages like [DeepSpeed](https://github.com/deepspeedai/DeepSpeed) w/ ZeRO Stage-3 do a lot more traffic than frameworks like [Megatron-DeepSpeed](https://github.com/bigscience-workshop/Megatron-DeepSpeed) which do tensor and pipeline parallelism in addition to data parallelism. The latter ones only send activations across and thus don't need as much bandwidth. But they are much more complicated to set up and run.
 
@@ -130,8 +176,8 @@ Of course, an efficient framework will overlap communications and compute, so th
 To get reasonable GPU throughput when training at scale (64+GPUs) with DeepSpeed ZeRO Stage 3 with V100s
 
 1. 100Gbps is not enough
-2. 200-400 Gbps is ok
-3. 800-1000 Gbps is ideal
+2. 200-400Gbps is ok
+3. 800-1000Gbps is ideal
 
 [full details](https://github.com/deepspeedai/DeepSpeed/issues/2928#issuecomment-1463041491)
 
@@ -181,9 +227,19 @@ When asking about which algorithm is better, I received:
 
 > Roughly speaking, ring is superior in terms of peak bandwidth (except on 2 nodes), tree is superior in terms of base latency (especially as we scale). `Bandwidth = Size / Time`, so whether you look at the time or the bandwidth for a given size, it will be a combination of both the peak bandwidth and the base latency. For a fixed size, as you scale, the base latency of ring will become prevalent and tree will be better.
 
-There is also a new algo, named `NVLS`, which if NVLink SHARP is available will run faster than NVLink itself, e.g. with NVLink 4.0 (450GBps) one can clock 480GBps doing all-reduce benchmarks. They are working on the inter-node version of that which [requires IB or RoCE](https://github.com/NVIDIA/nccl/issues/1031#issuecomment-1773965518) - this new algo is not documented anywhere as of this writing.
+There is also an algo named `NVLS`, which uses NVLink SHARP to do the reduction inside the switch and can therefore report more than the wire spec - with NVLink 4.0 (450GBps) an `all-reduce` benchmark clocks 480GBps. `NVLSTree` (NCCL 2.18+) is the inter-node counterpart and [requires IB or RoCE](https://github.com/NVIDIA/nccl/issues/1031#issuecomment-1773965518). See [SHARP](../README.md#sharp) for when it engages, what it is worth, and why `busbw` stops describing the wire once it does.
 
-And finally, if you would like to know which algo is being used - you can't - see [this answer](https://github.com/NVIDIA/nccl/issues/754#issuecomment-1346163469). So if you want to know which algo gives which throughput you will have to try them all explicitly by setting `NCCL_ALGO` env var and then you'd know which one was chosen. Or you can edit and recompile NCCL as suggested in that same answer, but you won't want this in production.
+And if you would like to know which algo is being used, `NCCL_DEBUG=INFO` combined with `NCCL_DEBUG_SUBSYS=INIT,TUNING` reports the selection per payload size:
+
+```bash
+NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=INIT,TUNING NCCL_DEBUG_FILE=/tmp/nccl.%h.%p.log \
+./build/all_reduce_perf -b 32k -e 16G -f 2 -g 8
+grep -ihoE "AllReduce: [0-9]+ Bytes -> Algo [A-Z]+ proto [A-Z0-9]+" /tmp/nccl.*.log | sort -u
+```
+
+On an 8x H200 node that prints lines like `AllReduce: 2097152 Bytes -> Algo NVLS proto SIMPLE`, and reveals where NCCL switches over - `RING` with the `LL` protocol for payloads up to 1MiB, then `NVLS` with `SIMPLE` from 2MiB up. `NCCL_DEBUG_FILE` keeps all of this out of the benchmark's own output, which otherwise gets buried.
+
+Setting `NCCL_ALGO` explicitly is still worth doing, but for a different purpose - measuring what each algorithm delivers on your hardware, rather than discovering which one NCCL chose.
 
 
 
@@ -227,7 +283,7 @@ In the past these 2 env vars were called `NCCL_MIN_NCHANNELS` and `NCCL_MAX_NCHA
 
 Because in the CUDA world compute and communication operations share the same limited number of SMs per GPU, if too many SMs are used for compute, the comms will be blocked and vice versa. Since ideally compute and comms should overlap and not block each other finding the right balance is important.
 
-The CTA value is derived algorithmically by NCCL, but the default behavior can be overridden by setting the lower and upper limits via the env vars: [`NCCL_MIN_CTAS`](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html?highlight=nccl_max_ctas#nccl-min-ctas) and [`NCCL_MAX_CTAS`](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html?highlight=nccl_max_ctas#nccl-max-ctas). And then NCCL's tuner will be limited to choose the best value in the user-imposed range. The same can be accomplished from the program using `pg_options` in [`torch.distributed.init_process_group`](https://pytorch.org/docs/stable/distributed.html#torch.distributed.init_process_group) via [`ncclConfig_t`](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/api/types.html#ncclconfig-t)'s `minCTAs` and `maxCTAs` (other process group creation functions have `pg_options` as well). The latter approach allows you to set different CTA settings to different process groups, whereas the env vars will apply globally to all process groups.
+The CTA value is derived algorithmically by NCCL, but the default behavior can be overridden by setting the lower and upper limits via the env vars: [`NCCL_MIN_CTAS`](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html?highlight=nccl_max_ctas#nccl-min-ctas) and [`NCCL_MAX_CTAS`](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html?highlight=nccl_max_ctas#nccl-max-ctas). And then NCCL's tuner will be limited to choose the best value in the user-imposed range. The same can be accomplished from the program using `pg_options` in [`torch.distributed.init_process_group`](https://docs.pytorch.org/docs/stable/distributed.html#torch.distributed.init_process_group) via [`ncclConfig_t`](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/api/types.html#ncclconfig-t)'s `minCTAs` and `maxCTAs` (other process group creation functions have `pg_options` as well). The latter approach allows you to set different CTA settings to different process groups, whereas the env vars will apply globally to all process groups.
 
 Here is an example that directly sets both values to `32` per process group:
 

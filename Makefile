@@ -1,6 +1,6 @@
 # usage: make help
 
-.PHONY: help spell prep-html-files html html-local pdf epub upload check-links-local check-links-all clean
+.PHONY: help check-style spell prep-html-files html html-local pdf epub upload fix-tables check-links-local check-links-all check-links-local-fast check-redirects check-programs clean
 .DEFAULT_GOAL := help
 
 help: ## this help
@@ -44,11 +44,26 @@ upload: pdf epub ## upload pdf to the hub
 	cp "Stas Bekman - Machine Learning Engineering.epub" ml-engineering-book/
 	cd ml-engineering-book/ && git commit -m "new version" "Stas Bekman - Machine Learning Engineering.pdf" "Stas Bekman - Machine Learning Engineering.epub" && git push
 
+fix-tables: ## fix markdown tables so they render (join multi-line headers, add missing blank lines, realign pipes)
+	python build/fix-tables.py
+
 check-links-local: html-local ## check local links
 	linkchecker --config build/linkcheckerrc $$(cat chapters-html.txt | tr "\n" " ") | tee linkchecker-local.txt
 
 check-links-all: html ## check all links including external ones
 	linkchecker --config build/linkcheckerrc $$(cat chapters-html.txt | tr "\n" " ") --check-extern --user-agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0" | tee linkchecker-all.txt
+
+check-programs: ## check the book's main programs still start up and print --help (doesn't run them)
+	@build/check-programs
+
+check-style: ## report hard-wrapped prose paragraphs (the book is one line per paragraph)
+	@python build/check-style.py
+
+check-links-local-fast: ## scan local links+anchors without building html (no markdown_it needed)
+	@python build/check-links.py
+
+check-redirects: ## report external links that have moved, so the book can cite the endpoint (needs network, slow)
+	@python build/check-redirects.py
 
 clean: ## remove build files
 	find . -name "*html" -exec rm {} \;

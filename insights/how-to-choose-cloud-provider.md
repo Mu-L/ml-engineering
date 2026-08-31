@@ -20,12 +20,22 @@ These notes assume you already know what compute you want for your specific work
 - TCO: Total Cost of Ownership
 
 
+## The most important questions to ask
+
+In my limited experience there are 3 questions you absolutely need to know the answer to:
+
+1. **Your GPUs will fail - guaranteed.** The critical question is how quickly they will be replaced and what's the procedure - if you need to get a hold of a human for each replacement this will be painful and slow, the best CSPs give you an API for you to do it yourself. Also beware of Humpty Dumpty GPUs, that will get returned to you w/o actually being replaced because when the technician checks them they appear to work just fine - but they will fail again when you try to use them - here is how to [detect if you get the same broken GPUs back](../compute/accelerator/nvidia/debug.md#how-to-detect-if-you-get-the-same-broken-node-again-and-again).
+
+2. **You will run into multiple problems, mainly with the hardware.** You need to know how quickly you can reach an engineer that can address the issue. Normally your reports will go to a PM, who will triage and try to get you to the right person, but very often this can take hours/days and sometimes requires escalation, especially if the PM isn't the most experienced person in the world.
+
+3. **You need to know if you can break the contract - how quickly and at what cost.** Things may get really bad for your team, but if you can't walk away, that would guarantee burnout for one or more persons on your team and a potential negative impact on your ability to make progress and lead your team to success.
+
 
 ## Contracts
 
 If you're paying per hour, you don't need to worry about contracts. But this method isn't good long term because you will be paying many times more and you won't have a steady reliable accelerator foundation. A long term contract at times and with a good negotiator can lead to a 10x in total cost of ownership (TCO) savings (and time)!
 
-### Free Trials
+### Free trials
 
 Most cloud service providers (CSPs) have trial programs where you can "kick the tires" for a few days/weeks on a few nodes for free.
 
@@ -42,7 +52,7 @@ So if you want the latest generation as soon as it becomes available you're almo
 
 I'm not sure if CSPs are to blame, because often they get the hardware delivery months after it was promised by the manufacturers and, of course, by now they can't keep their promises to the customers, so they just go ahead and deliver...
 
-Then some CSPs develop their own hardware (e.g. network stack) in order to have better margins and then they fail to complete those custom solutions in time, the latest accelerators are there, but the whole system is limping. It's much safer when off-the-shelf components are offered, since those are most likely to be well-tested working components (expect it's likely to cost more).
+Then some CSPs develop their own hardware (e.g. network stack) in order to have better margins and then they fail to complete those custom solutions in time, the latest accelerators are there, but the whole system is limping. It's much safer when off-the-shelf components are offered, since those are most likely to be well-tested working components (except it's likely to cost more).
 
 I think it's OK if the customer wants the hardware early, there should just be an honest disclosure as in: *"look we need some 3 more months to make things solid, if you want the nodes now you can have them but we can't guarantee anything."*
 
@@ -79,7 +89,7 @@ Same goes for network and storage, albeit those typically fail a lot less often 
 
 In general any critical part of the service should have an SLO and clearly defined repercussions if the SLOs aren't met.
 
-Most Tier 1 companies should already include their standard SLAs in the contract. In theory the customer should be able to negotiate those to adapt to their needs, thought it might not always be possible. Sometimes offering to pay more may allow for a better than standard SLO.
+Most Tier 1 companies should already include their standard SLAs in the contract. In theory the customer should be able to negotiate those to adapt to their needs, though it might not always be possible. Sometimes offering to pay more may allow for a better than standard SLO.
 
 
 ### Discuss a contract breaking clause
@@ -139,7 +149,7 @@ Otherwise, a new batch of accelerators often has a 3-10% failure rate, which is 
 
 So ask your provider how long did they burn in your accelerators/systems for, if at all.
 
-I'm yet to find a golden reference point, but, for example,  [SemiAnalysis](https://semianalysis.com/2024/10/03/ai-neocloud-playbook-and-anatomy/#cluster-deployment-and-acceptance-test) suggests that OEM provider performs a 3-4 weeks burn-in, and then the CSP conducts another 2-3 day long burn-in/acceptance test. So if that's the case you want to ensure that the systems were stress-tested for at least 2-3 days.
+I'm yet to find a golden reference point, but, for example,  [SemiAnalysis](https://newsletter.semianalysis.com/p/ai-neocloud-playbook-and-anatomy#%C2%A7cluster-deployment-and-acceptance-test) suggests that OEM provider performs a 3-4 weeks burn-in, and then the CSP conducts another 2-3 day long burn-in/acceptance test. So if that's the case you want to ensure that the systems were stress-tested for at least 2-3 days. And, BTW, nothing stops you from doing some massive training as a test if you're not worries about stop-n-go for failures, if it works you made some progress. Of course, you want to make sure that your training stresses out all parts of the system in a sustainable fashion.
 
 
 ### Dealing with accelerator failures
@@ -233,7 +243,7 @@ Here are some critical questions you need to ask long before the migration start
 - What happens to the files being edited and created while the filesystem is on the move - do you send everybody home while the migration is happening and freeze the filesystem?
 
 
-### Backup and Archive
+### Backup and archive
 
 Many CSPs only have one tier of file storage available at one price point. However, organiations can have needs for multiple tiers of storage. For example, you might want to archive old model checkpoints or finetuning datasets to cheap, cold storage such as S3 object on HDD.
 
@@ -247,7 +257,7 @@ Having the flexibility to expand your total storage capacity, and keep the "hot"
 
 This segment is mostly relevant to those planning to do training and finetuning. If you need to rent accelerators either for inference via large deployments of microservices or for small, on-demand, interactive work (i.e. notebooks) you can safely ignore this information. The only exception is when you plan on inferencing very big models that require more than one node for a single replica.
 
-In general you want to ensure that the offered [intra-node](../network#intra-node-networking) and [inter-node](../network#inter-node-networking) network speeds match the promise and your expectations.
+In general you want to ensure that the offered [intra-node](../network/README.md#intra-node-networking) and [inter-node](../network/README.md#inter-node-networking) network speeds match the promise and your expectations.
 
 ### Ask for the actual performance numbers
 
@@ -255,9 +265,15 @@ Compute theory never matches reality, and the reality may dramatically vary from
 
 The easiest ask is to request an `all-reduce` benchmark plot over 4-8-16-32-64 nodes (or more if your cluster is more than 64 nodes). You'd expect the bandwidth to gradually become worse with more participating nodes, but not dramatically so. Some networks become very inefficient at higher number of nodes.
 
-Please refer to [Real network throughput](../network#real-network-throughput) for more details.
+Please refer to [Real network throughput](../network/README.md#real-network-throughput) for more details.
 
-Ideally you want to benchmark at least a few payloads - the ones that are of a particular interest to you because you know that this is the collective payload you will be using in your workloads. I usually just start by asking for a plot of a big payload of about 4-16GiB (16GiB would get the best bandwidth on the latest fastest inter-node networks), if the performance drops below 80% of the theoretical GBps, then I know we have a problem.
+Ideally you want to benchmark at least a few payloads - the ones that are of a particular interest to you because you know that this is the collective payload you will be using in your workloads. I usually just start by asking for a plot of a big payload of about 4-16GiB (16GiB would get the best bandwidth on the latest fastest inter-node networks), which immediately tells me if the network is good. But it's very likely you will want to know 256-512MiB payload as well, so just as well ask for the wider range.
+
+The most practical approach I've used is to ask the CSP for their own `nccl-tests` `all-reduce` numbers - on 1 node, and on 4-16 nodes. Every provider wants to put their best foot forward, so what comes back is their best case, which is exactly what you want: it becomes the number you hold them to in your SLA. You can ask around whether those figures look right for that hardware, and in my experience they usually do. Then once you have the nodes, run the same benchmark yourself - those are the numbers you should be able to reproduce. If you can't, something about your allocation differs from what they demoed, and now you have a specific, quantified thing to escalate instead of a vague complaint that the network feels slow.
+
+footnote: of course, ask them about this upfront, not when you negotiate the SLA. That's too late and they then have no incentive to show you what their best case looks like.
+
+I'm yet to see NVLink not performing the same everywhere (unless it's misconfigured on the software level), but still ask to also see the single-node benchmark.
 
 
 ### Does the network steal from the accelerator memory?
@@ -335,4 +351,4 @@ If you feel that these notes are overwhelming for you, I occasionally consult he
 
 ## Additional reading
 
-- semianalysis.com created a ClusterMax CSP rating system and includes excellent explanations of the different criteria and plans to continue ranking many CSPs. [2025](https://semianalysis.com/2025/03/26/the-gpu-cloud-clustermax-rating-system-how-to-rent-gpus/)
+- semianalysis.com created a ClusterMax CSP rating system and includes excellent explanations of the different criteria and plans to continue ranking many CSPs. [2025](https://newsletter.semianalysis.com/p/the-gpu-cloud-clustermax-rating-system-how-to-rent-gpus)

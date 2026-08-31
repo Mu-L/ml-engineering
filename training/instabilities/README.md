@@ -6,7 +6,7 @@ Sub-sections:
 
 ## Learning from Training Logbooks
 
-The best learning is to read [Publicly available training LLM/VLM logbooks](../../resources#publicly-available-training-llmvlm-logbooks) because there you can see exactly what happened and how the problem has been overcome.
+The best learning is to read [Publicly available training LLM/VLM logbooks](../../resources/README.md#publicly-available-training-llmvlm-logbooks) because there you can see exactly what happened and how the problem has been overcome.
 
 
 ## STD Init
@@ -36,7 +36,7 @@ See also [Detecting problematic tensor values](../../debug/pytorch.md#detecting-
 
 Certain mathematical operations could be unstable when dealing with low precision numbers.
 
-For example, please see this very interesting [PyTorch guide on numerical stability](https://pytorch.org/docs/stable/notes/numerical_accuracy.html).
+For example, please see this very interesting [PyTorch guide on numerical stability](https://docs.pytorch.org/docs/stable/notes/numerical_accuracy.html).
 
 Now let's look at a specific example of this concept in action.
 
@@ -56,8 +56,7 @@ Proposal: move the `norm_factor` inward, so Q and K are scaled down before matri
         attention_scores = matmul_result.view(*output_size)
 ```
 
-To make the operation mathematically equivalent, moving the norm factor inward requires taking sqrt again
-if n is a scalar, A and B matrices:
+To make the operation mathematically equivalent, moving the norm factor inward requires taking sqrt again if n is a scalar, A and B matrices:
 ```
 n * (A dot B) === (sqrt(n) * A) dot (sqrt(n) * B)
 ```
@@ -76,12 +75,11 @@ The issue is that `alpha` is multiplied after the matrix-matrix multiplication i
 
 ## "Bad" combination of data batch and model parameter state
 
-PaLM team observed dozens of loss spikes at "highly irregular intervals" when training larger models. While they were not able to track down the root cause, they mitigated the issue by restarting from an earlier checkpoint and skipping potentially problematic data batches. [Section 5.1 Training instability](https://arxiv.org/pdf/2204.02311.pdf)
+PaLM team observed dozens of loss spikes at "highly irregular intervals" when training larger models. While they were not able to track down the root cause, they mitigated the issue by restarting from an earlier checkpoint and skipping potentially problematic data batches. [Section 5.1 Training instability](https://arxiv.org/pdf/2204.02311)
 
 
 ## Time-domain correlation divergence in Adam
 
-[A Theory on Adam Instability in Large-Scale Machine Learning](https://arxiv.org/abs/2304.09871) performs a rigorous study of divergence spikes while training LLMs at up to 546B parameters - and suggests that the time-domain correlation leads to divergence of Adam. This is triggered by the epsilon value not being small enough and gradient
-estimation components become similar to the epsilon.
+[A Theory on Adam Instability in Large-Scale Machine Learning](https://arxiv.org/abs/2304.09871) performs a rigorous study of divergence spikes while training LLMs at up to 546B parameters - and suggests that the time-domain correlation leads to divergence of Adam. This is triggered by the epsilon value not being small enough and gradient estimation components become similar to the epsilon.
 
 In section 7.1 they propose practical suggestions, the most interesting one of them is setting epsilon to 0 and possibly dealing with division by zero condition.

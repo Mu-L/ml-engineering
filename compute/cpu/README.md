@@ -1,6 +1,6 @@
 # CPU
 
-As of this writing Machine learning workloads don't use much CPU so there aren't too many things to tell in this chapter. As CPUs evolve to become more like GPUs this is like to change, so I'm expecting this chapter to evolve along the evolution of the CPUs.
+As of 2026-08 Machine learning workloads don't use much CPU so there aren't too many things to tell in this chapter. As CPUs evolve to become more like GPUs this is like to change, so I'm expecting this chapter to evolve along the evolution of the CPUs.
 
 ## How many cpu cores do you need
 
@@ -25,7 +25,7 @@ What happens if you have more very active processes than the total number of cpu
 
 But modern cloud offerings typically have 50-100+ cpu-cores so usually there is no problem to have enough cores to go around.
 
-See also [Asynchronous DataLoader](../../training/performance#asynchronous-dataloader).
+See also [Asynchronous DataLoader](../../training/performance/README.md#asynchronous-dataloader).
 
 
 
@@ -37,7 +37,7 @@ Some frameworks, like [DeepSpeed](https://www.deepspeed.ai/tutorials/zero-offloa
 
 ## NUMA affinity
 
-See [NUMA affinity](../../training/performance#numa-affinity).
+See [NUMA affinity](../../training/performance/README.md#numa-affinity).
 
 
 

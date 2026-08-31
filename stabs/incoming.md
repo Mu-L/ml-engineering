@@ -67,31 +67,6 @@ Incoming suggestions from Ross Wightman to integrate:
 
 # Debug
 
-Memory leak Checking
-
-```
-cuda-memcheck --leak-check full python program.py
-```
-
-
-Race detection:
-```
-cuda-memcheck --tool racecheck
-```
-with extra options:
- --save to save output to a disk
- --print-level to control output
-
-```
-cuda-memcheck --tool racecheck --racecheck-report analysis
-```
-
-gdb with cuda
-
-```
-cuda-gdb
-```
-
 - integrate debug_utils.py
 
 
@@ -176,7 +151,7 @@ Print driver configuration (interface name comes from `ifconfig`):
 `perftest` Package includes:
 - `ib_send_bw`
 - `ib_send_lat`
-- `ib_write_bw`
+- `ib_write_bw` - done: [Measuring the inter-node fabric on its own](../network/README.md#measuring-the-inter-node-fabric-on-its-own)
 - `ib_write_lat`
 - `ib_read_bw`
 - `ib_read_lat`
@@ -193,6 +168,7 @@ If the network is much slower than it should be, might have to specify which HCA
 ```
 export NCCL_IB_HCA=mlx5
 ```
+see [How to diagnose NCCL multi-gpu and multi-node connectivity issues](../network/debug/README.md#how-to-diagnose-nccl-multi-gpu-and-multi-node-connectivity-issues) for the in-depth discussion, including the per-port `=mlx5_0:1` form and the `^=` syntax for excluding an adapter.
 
 might need to install ib packages on the vms:
 
@@ -264,62 +240,3 @@ https://github.com/LLNL/scr/tree/develop/python#installing-the-scr-python-module
 
 Example checkpoint in python:
 https://github.com/LLNL/scr/blob/1878de8756c2b51882a7cda7b97b142eae4e3995/python/scr_example.py#L64-L105
-
-
-
-  396  dmesg | grep -i 'limited by'
-  397  sudo dmesg | grep -i 'limited by'
-  398  nvidia-smi nvlink -e
-
-
-GPU VBIOS version might be important when researching issues. Let's add the name and bus id to the query, we get:
-
-```
-$ nvidia-smi --query-gpu=gpu_name,gpu_bus_id,vbios_version --format=csv
-
-$ nvidia-smi -q | grep "VBIOS Version"
-    VBIOS Version                         : 96.00.89.00.01
-    [...]
-    VBIOS Version                         : 96.00.89.00.01
-```
-
-
-Check error counters of NVLink links
-
-```
-$ nvidia-smi nvlink -e
-GPU 0: NVIDIA H100 80GB HBM3 (UUID: GPU-abcdefab-cdef-abdc-abcd-abababababab)
-         Link 0: Replay Errors: 0
-         Link 0: Recovery Errors: 0
-         Link 0: CRC Errors: 0
-
-         Link 1: Replay Errors: 0
-         Link 1: Recovery Errors: 0
-         Link 1: CRC Errors: 0
-
-         [...]
-
-         Link 17: Replay Errors: 0
-         Link 17: Recovery Errors: 0
-         Link 17: CRC Errors: 0
-```
-
-Another useful command is:
-```
-$ nvidia-smi nvlink --status
-GPU 0: NVIDIA H100 80GB HBM3 (UUID: GPU-abcdefab-cdef-abdc-abcd-abababababab)
-         Link 0: 26.562 GB/s
-         [...]
-         Link 17: 26.562 GB/s
-```
-this one tells you the current speed of each link
-
-Run `nvidia-smi nvlink -h` to discover more features (reporting, resetting counters, etc.).
-
-nvidia-smi --query-remapped-rows=gpu_name,gpu_bus_id,remapped_rows.failure,remapped_rows.pending,\
-remapped_rows.correctable,remapped_rows.uncorrectable \
---format=csv gpu_name, gpu_bus_id, remapped_rows.failure,remapped_rows.pending,\
-remapped_rows.correctable, remapped_rows.uncorrectable
-
-
-nvidia-smi --query-remapped-rows=gpu_name,gpu_bus_id,remapped_rows.failure,remapped_rows.pending,remapped_rows.correctable,remapped_rows.uncorrectable --format=csvgpu_name, gpu_bus_id, remapped_rows.failure, remapped_rows.pending, remapped_rows.correctable,remapped_rows.uncorrectable
