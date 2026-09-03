@@ -22,6 +22,9 @@ If you use a non-SLURM scheduler validate that it too can do unmanned bad node r
 
 You also need at least one additional node for running various preventative watchdogs (discussed later in this chapter), possibly offloading the checkpoints and doing cleanup jobs.
 
+## Rebuilding the process group in place
+
+The rest of this chapter recovers from a dead rank by exiting and letting the next queued job start on a fresh allocation. Starting from PyTorch 2.14 the communicator itself can be rebuilt in place, so surviving ranks keep their warm process state. That path is experimental as of 2.14: you opt in at `init_process_group(..., enable_reconfigure=True)`, and the calls (`dist._get_reconfigure_handle`, `dist._reconfigure`) are underscored and documented as subject to change. Until they stabilize, keep using spare nodes and a job array as the recovery path.
 
 
 ## Queue up multiple training jobs

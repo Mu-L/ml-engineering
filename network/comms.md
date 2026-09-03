@@ -10,6 +10,14 @@ For example, [Pipeline Parallelism](../training/model-parallelism/README.md#pipe
 
 PyTorch has `send` and `recv` for blocking, `isend` and `irecv` for non-blocking p2p comms. [more](https://docs.pytorch.org/tutorials/intermediate/dist_tuto.html#id1).
 
+## One-sided communications
+
+Collectives and `send`/`recv` are two-sided: every rank that participates posts a matching call. One-sided (RMA) communication lets one rank write into or read from another rank's memory without that peer posting `recv`. That is the useful shape for irregular access - an embedding lookup, a weight copy, routing a token to one expert - where making every rank join an all-to-all would move more data than the algorithm needs.
+
+Starting from PyTorch 2.14, `nccl2` exposes this as a *window* over the NCCL `Put`/`Get` APIs. Creating the window is still collective - every rank in the group must call it in the same order - and as of 2.14 the Python entry points are experimental (`dist._new_window`, `dist._supports_window`). Use it when the access pattern is sparse; keep two-sided collectives when every rank participates.
+
+Reference: [PyTorch 2.14 release blog](https://pytorch.org/blog/pytorch-2-14-release-blog/).
+
 
 ## Collective communications
 
