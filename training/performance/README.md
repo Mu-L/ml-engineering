@@ -441,6 +441,18 @@ torch-dist-mem-usage.py
 
 So you can see that the [CUDA kernels](#preloaded-cuda-kernels-memory-usage) took 0.55GiB (first line `NV 0.55 GiB`), but when `dist.barrier` was run an additional 1.5GiB were consumed. If you run `init_process_group` with `device_id` arg then the additional memory allocation will move to that call instead and less will be used by `dist.barrier`.
 
+#### Choosing between `nccl`, `nccl2` and `nccl-lazy`
+
+Starting from PyTorch 2.14, PyTorch's distributed package includes a second implementation over the same NCCL library. Despite its name, `nccl2` is not NCCL version 2 and does not replace NCCL's collective algorithms. What it changes is how PyTorch creates, splits, waits for and aborts the communicators those collectives run on. In PyTorch 2.14, `init_process_group("nccl")` still selects the established `ProcessGroupNCCL`; select the new implementation explicitly with `backend="nccl2"`, or set `TORCH_DIST_USE_NCCL2=1` to make `"nccl"` resolve to it. The explicit `nccl-legacy` name always selects the established implementation, and `nccl-lazy` is a variant of `nccl2` that creates a communicator per peer on first use rather than up front.
+
+Measured on an idle 8x H200 node with PyTorch 2.14.0, CUDA 13.0 and NCCL 2.30.7, a 1GiB `all_reduce` landed between 458 and 466GBps `busbw` under both, and repeats of a single implementation varied by as much as the gap between the two - so these runs show no throughput difference. Both issue the same NCCL collectives.
+
+The measurable difference was memory. After `init_process_group` and the first `dist.barrier`, rank 0's accelerator held 1.56GiB under `nccl` and 5.16GiB under `nccl2` - reproduced across runs, and unchanged by whether `device_id` was passed. So don't switch expecting faster collectives, and measure the memory cost on your own topology before adopting it. What `nccl2` offers instead is control over the communicator's lifetime: subgroups built at `new_group` time rather than at their first collective, and - through APIs the release marks as unstable as of 2.14 - a group that can be rebuilt in place after a rank dies instead of requiring a restart.
+
+`nccl-lazy` is for when each rank talks to only a few peers, as in [Pipeline Parallelism](../../training/model-parallelism/README.md#pipeline-parallelism), since a communicator that is never used is never built. It does not lower peak memory for a group that runs collectives from the first step, because that communicator gets built either way.
+
+Reference: [PyTorch 2.14 release blog](https://pytorch.org/blog/pytorch-2-14-release-blog/).
+
 
 #### Memory fragmentation
 
