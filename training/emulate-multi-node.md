@@ -259,7 +259,9 @@ export NCCL_MULTI_RANK_GPU_ENABLE=1
 export NCCL_NVLS_ENABLE=0
 ```
 
-The NCCL docs say `NCCL_MULTI_RANK_GPU_ENABLE` isn't required, since each MIG instance is a distinct CUDA device - but on an H200 with NCCL 2.31.2 the communicator won't come up without it, so set it anyway. `NCCL_NVLS_ENABLE=0` disables NVLink SHARP, which isn't supported with MIG.
+The NCCL docs say `NCCL_MULTI_RANK_GPU_ENABLE` isn't required, since each MIG instance is a distinct CUDA device - but on an H200 with NCCL 2.31.2 the communicator won't come up without it, so set it anyway. NCCL identifies a rank's device by the parent GPU's NVML index and PCI bus id rather than by the MIG instance, so four ranks on four instances of one GPU look to it like four ranks sharing a single device, and without the flag init stops with `Multiple Ranks are using the same GPU/Partition`.
+
+`NCCL_NVLS_ENABLE=0` is a guard rather than a requirement. NCCL's default already leaves NVLink SHARP off in this situation, so if nothing in your environment sets that variable you can leave it alone. But many cluster images and pod specs export `NCCL_NVLS_ENABLE=1`, and when NVLink SHARP is explicitly demanded NCCL refuses to start with `NCCL_NVLS_ENABLE has been set to "1" and communicator has multiple ranks using the same NVML device`. Setting it to 0 costs nothing and makes the recipe work regardless of what the environment already exported. You can also set `NCCL_NVLS_ENABLE=2` which will automatically use NVLS when possible.
 
 The docs also tell you to set `NCCL_MNNVL_ENABLE=0`. On a node with no NVLink fabric that flag changes nothing - the same benchmark returned 142.28, 142.42 and 142.23 GBps with it unset, set to `0` and set to `1` - so it only matters on fabric-attached systems like GB200 NVL72.
 
@@ -414,7 +416,7 @@ exec python all_reduce_bench.py --payload_size_in_gib 2'
 | 8x whole H200 (NVLink)         | 465.9GBps |          100% |
 | 4x `1g.35gb` on each of 2 GPUs |  25.6GBps |            5% |
 
-That is a collapse, and it is not a small-message effect - the 2GiB payload is no better than the 512MiB one. NCCL's own log says why: of the ring's channels, 24 hops went `via P2P/CUMEM` and 6 went `via SHM/direct`. The hops that stay inside a GPU keep the fast path, but the ones that cross to the other GPU fall back to host shared memory, because the CUDA driver doesn't support NVLink P2P for MIG instances - the same limitation that forces `NCCL_NVLS_ENABLE=0`. A ring runs at the speed of its slowest link, so those few host-memory hops set the pace for all 8 ranks.
+That is a collapse, and it is not a small-message effect - the 2GiB payload is no better than the 512MiB one. NCCL's own log says why: of the ring's channels, 24 hops went `via P2P/CUMEM` and 6 went `via SHM/direct`. The hops that stay inside a GPU keep the fast path, but the ones that cross to the other GPU fall back to host shared memory, because the CUDA driver doesn't support NVLink P2P for MIG instances - the same limitation that rules out NVLink SHARP here. A ring runs at the speed of its slowest link, so those few host-memory hops set the pace for all 8 ranks.
 
 
 ### Mixing MIG instances and full GPUs
