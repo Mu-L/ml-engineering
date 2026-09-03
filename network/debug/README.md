@@ -264,7 +264,7 @@ So I typically first slice out one iteration. e.g. if each iteration log starts 
 ```
 csplit main_log.txt '/iteration: /' "{*}"
 ```
-and then analyse one of the resulting files that correspond to the iterations. By default it will be named something like `xx02`.
+and then analyze one of the resulting files that correspond to the iterations. By default it will be named something like `xx02`.
 
 
 ## Useful NCCL Debug Environment Variables
@@ -307,7 +307,7 @@ NCCL_DEBUG_FILE=/path/to/nccl-log.%h.%p.txt
 - `%h` is replaced with the hostname
 - `%p` is replaced with the process PID.
 
-If you then need to analyse hundreds of these at once, here are some useful shortcuts:
+If you then need to analyze hundreds of these at once, here are some useful shortcuts:
 
 - grep for a specific match and also print the file and line number where it was found:
 

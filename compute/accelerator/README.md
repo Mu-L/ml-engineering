@@ -32,7 +32,7 @@ GPUs:
 
 HPU:
 - Intel's Gaudi2 and Gaudi3 are available at Intel's cloud.
-- Falcon Shores is to replace Gaudi in 2025 - update - the project has been cancelled
+- Falcon Shores is to replace Gaudi in 2025 - update - the project has been canceled
 - Jaguar Shores is named as the replacement, but as of 2026-07-31 Intel publishes nothing about it - see [Intel Gaudi](#intel-gaudi)
 
 TPU:
@@ -820,7 +820,7 @@ AMD:
 
 Intel:
 - Jaguar Shores - named as the successor, but no Intel specification or date is published; see [Intel Gaudi](#intel-gaudi)
-- Falcon Shores - cancelled
+- Falcon Shores - canceled
 - [Gaudi3](https://habana.ai/products/gaudi3/), somewhat below B200 theoretical TFLOPS-wise - already available on Intel cloud - [spec](https://www.intel.com/content/www/us/en/content-details/817486/intel-gaudi-3-ai-accelerator-white-paper.html)
 - [Gaudi2](https://habana.ai/products/gaudi2/) somewhere between A100 and H100 theoretical TFLOPS-wise [spec](https://docs.habana.ai/en/latest/Gaudi_Overview/Gaudi_Architecture.html) - available on Intel cloud. AWS has the older Gaudi1 via [DL1 instances](https://aws.amazon.com/ec2/instance-types/dl1/). It's also available on-premises implementations via Supermicro and WiWynn.
 
@@ -936,7 +936,7 @@ There are no official TFLOPS information published (and from talking to an Intel
 
 Comparison: supposedly Gaudi2 competes with NVIDIA H100
 
-On what comes after Gaudi: Falcon Shores was to replace it and was cancelled. Jaguar Shores is the name that replaced that plan, but as of 2026-08-05 there is nothing to evaluate - Intel has since retired its dedicated AI-accelerators page and its [product index](https://www.intel.com/content/www/us/en/products/details/processors.html) lists only Gaudi and the Data Center GPU Flex Series under AI accelerators, with no occurrence of `Jaguar`, `Falcon` or `Shores` anywhere in it, and the [data center GPU](https://www.intel.com/content/www/us/en/products/details/discrete-gpus/data-center-gpu.html) page doesn't mention them either. So treat Jaguar Shores as a roadmap name with no published specification, no launch date, and no confirmation from Intel - not as a part you can plan around. Gaudi3 remains Intel's current accelerator.
+On what comes after Gaudi: Falcon Shores was to replace it and was canceled. Jaguar Shores is the name that replaced that plan, but as of 2026-08-05 there is nothing to evaluate - Intel has since retired its dedicated AI-accelerators page and its [product index](https://www.intel.com/content/www/us/en/products/details/processors.html) lists only Gaudi and the Data Center GPU Flex Series under AI accelerators, with no occurrence of `Jaguar`, `Falcon` or `Shores` anywhere in it, and the [data center GPU](https://www.intel.com/content/www/us/en/products/details/discrete-gpus/data-center-gpu.html) page doesn't mention them either. So treat Jaguar Shores as a roadmap name with no published specification, no launch date, and no confirmation from Intel - not as a part you can plan around. Gaudi3 remains Intel's current accelerator.
 
 
 
@@ -963,7 +963,7 @@ TPU-specific vocabulary:
 - ICI (inter-chip interconnect) - the scale-up fabric, a 3D torus where each chip has "a direct connection to the nearest neighboring chips in 3 dimensions"
 - slice, cube, pod - the units of allocation; a slice is "a collection of chips all located inside the same TPU Pod connected by high-speed inter-chip interconnects (ICI)"
 
-TPU7x (Ironwood) per chip: 192GB HBM at "approximately 7.37 TB/s", 2307TFLOPS bf16 and 4614TFLOPS fp8, and a "Bidirectional inter-chip interconnect (ICI) bandwidth per chip (GBps)" of 1200. The torus carries "bi-directional bandwidth of 200 GBps per axis", which is consistent with 1200 total across six neighbours. A VM is always 4 chips, and a pod reaches "a 9,216-chip footprint".
+TPU7x (Ironwood) per chip: 192GB HBM at "approximately 7.37 TB/s", 2307TFLOPS bf16 and 4614TFLOPS fp8, and a "Bidirectional inter-chip interconnect (ICI) bandwidth per chip (GBps)" of 1200. The torus carries "bi-directional bandwidth of 200 GBps per axis", which is consistent with 1200 total across six neighbors. A VM is always 4 chips, and a pod reaches "a 9,216-chip footprint".
 
 The catch isn't performance, it is lock-in: TPUs are rent-only on GCP and the software path is XLA, so a codebase that reaches for custom CUDA kernels doesn't move over for free.
 
@@ -999,7 +999,7 @@ Specs: [Cerebras WSE](https://www.cerebras.ai/chip).
 
 ### SambaNova
 
-Inference-first, and explicitly so - the vocabulary and the product line are both organised around serving rather than training.
+Inference-first, and explicitly so - the vocabulary and the product line are both organized around serving rather than training.
 
 SambaNova-specific vocabulary:
 - RDU (Reconfigurable Dataflow Unit) - the accelerator. The "fourth-generation RDU SN40" and "fifth-generation SN50" are the current parts

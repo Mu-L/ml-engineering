@@ -207,7 +207,7 @@ For a job that finished its run use:
 sacct -j JOBID
 ```
 
-This command is also useful to discover if you have any `srun` jobs already running on that allocation (including those that were finished or cancelled). For example, you could kill some run-away `srun` step via `scancel <jobid>.<step-id>` and you'd find that `<step-id>` via the above command. The main job will continue running if it's an interactive job even if you cancelled all step jobs.
+This command is also useful to discover if you have any `srun` jobs already running on that allocation (including those that were finished or canceled). For example, you could kill some run-away `srun` step via `scancel <jobid>.<step-id>` and you'd find that `<step-id>` via the above command. The main job will continue running if it's an interactive job even if you canceled all step jobs.
 
 To see more details:
 ```bash
@@ -347,7 +347,7 @@ srun pkill python
 
 `sacct` displays accounting data for all jobs and job steps in the SLURM job accounting log or SLURM database.
 
-So this is a great tool for analysing past events.
+So this is a great tool for analyzing past events.
 
 For example, to see which nodes were used to run recent gpu jobs:
 

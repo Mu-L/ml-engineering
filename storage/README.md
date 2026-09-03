@@ -762,7 +762,7 @@ So for example to find which users consume the most disk run:
 ```bash
 sudo du -ahd1 /home/* | sort -rh
 ```
-it will sort the data by the worst offenders. If you want to help them out you could go into their dirs and analyse the data a level deeper:
+it will sort the data by the worst offenders. If you want to help them out you could go into their dirs and analyze the data a level deeper:
 
 ```bash
 sudo du -ahd1 /home/*/* | sort -rh

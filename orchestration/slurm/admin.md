@@ -30,7 +30,7 @@ node-24: Sat Oct 14 02:10:02 UTC 2023
 node-26: Sat Oct 14 02:10:02 UTC 2023
 ```
 
-Let's do something more useful and complex. Let's kill all GPU-tied processes that didn't exit when the SLURM job was cancelled:
+Let's do something more useful and complex. Let's kill all GPU-tied processes that didn't exit when the SLURM job was canceled:
 
 First, this command will give us all process ids that tie up the GPUs:
 
@@ -84,7 +84,7 @@ scontrol update nodename=node-5 state=drain reason="maintenance"
 
 ### Undrain nodes killed due to slow process exit
 
-Sometimes processes are slow to exit when a job has been cancelled. If the SLURM was configured not to wait forever it'll automatically drain such nodes. But there is no reason for those nodes to not be available to the users.
+Sometimes processes are slow to exit when a job has been canceled. If the SLURM was configured not to wait forever it'll automatically drain such nodes. But there is no reason for those nodes to not be available to the users.
 
 So here is how to automate it.
 
@@ -141,4 +141,4 @@ Analyze the events log in the SLURM's log file:
 sudo cat /var/log/slurm/slurmctld.log
 ```
 
-This, for example, can help to understand why a certain node got its jobs cancelled before time or the node got removed completely.
+This, for example, can help to understand why a certain node got its jobs canceled before time or the node got removed completely.

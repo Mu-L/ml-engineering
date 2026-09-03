@@ -672,7 +672,7 @@ Supports only NVIDIA gpus.
 
 [MLC-LLM](https://github.com/mlc-ai/mlc-llm)
 
-If your favourite inference framework isn't listed please make a PR and add it.
+If your favorite inference framework isn't listed please make a PR and add it.
 
 
 

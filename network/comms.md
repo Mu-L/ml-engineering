@@ -190,7 +190,7 @@ Then the next chunk is done, until all smaller messages are reduced:
 
 ### Tree
 
-A ring passes the message from neighbour to neighbour, so the number of steps grows with the number of GPUs `k`, and the base latency grows with it. A tree fans the message out instead, so the hop count grows with `log(k)`. That is why the two swap places as you scale: ring keeps the higher peak bandwidth, tree the lower base latency, and for a fixed message size a large enough `k` makes tree the faster of the two.
+A ring passes the message from neighbor to neighbor, so the number of steps grows with the number of GPUs `k`, and the base latency grows with it. A tree fans the message out instead, so the hop count grows with `log(k)`. That is why the two swap places as you scale: ring keeps the higher peak bandwidth, tree the lower base latency, and for a fixed message size a large enough `k` makes tree the faster of the two.
 
 A single binary tree would waste half the machines: half the nodes are leaves, and a leaf only ever receives, so its outbound bandwidth never contributes. NCCL therefore builds a *double binary tree* - two trees over the same GPUs, arranged so no node is an interior node in both and at most one is a leaf in both. Both carry traffic simultaneously, which recovers the full bandwidth. The second tree is the first mirrored when the node count is even, or shifted by one position when it is odd.
 
