@@ -280,7 +280,7 @@ Not yet available:
   * NVIDIA Rubin - specs published but still marked preliminary
   * AMD MI455X - Helios volume deployments expected 2H-2026
   * SambaNova SN50 - shipping "in the second half of 2026"; SN40L is the current part
-  * Intel Jaguar Shores - a roadmap name with no published specification or date
+  * Intel Crescent Island - inference GPU, customer sampling announced for H2-2026; no published TFLOPS
 
 Regional:
 

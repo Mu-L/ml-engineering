@@ -29,11 +29,11 @@ While this might be changing in the future, unlike the consumer GPU market, as o
 GPUs:
 - As of today, ML clouds/HPCs already have B200s/B300s, and GB200/GB300 NVL72 racks are shipping. Rubin is expected to emerge in H2-2026.
 - AMD's MI325X is now widely available on Tier 2 cloud providers. MI355X is starting to emerge. MI455X hopefully in 2026. New: large CSPs started to offer AMD GPUs
+- Intel's Crescent Island is an inference-oriented Xe3P data-center GPU, with customer sampling in H2-2026. Intel has not published TFLOPS. See [Intel Crescent Island](#intel-crescent-island)
 
 HPU:
 - Intel's Gaudi2 and Gaudi3 are available at Intel's cloud.
 - Falcon Shores is to replace Gaudi in 2025 - update - the project has been canceled
-- Jaguar Shores is named as the replacement, but as of 2026-07-31 Intel publishes nothing about it - see [Intel Gaudi](#intel-gaudi)
 
 TPU:
 - Google's TPUs are, of course, available but they aren't the most desirable accelerators because you can only rent them, and the software isn't quite easily convertible between GPUs and TPUs, and so many (most?) developers remain in the GPU land, since they don't want to be locked into a hardware which is a Google monopoly.
@@ -819,9 +819,9 @@ AMD:
 
 
 Intel:
-- Jaguar Shores - named as the successor, but no Intel specification or date is published; see [Intel Gaudi](#intel-gaudi)
 - Falcon Shores - canceled
 - [Gaudi3](https://habana.ai/products/gaudi3/), somewhat below B200 theoretical TFLOPS-wise - already available on Intel cloud - [spec](https://www.intel.com/content/www/us/en/content-details/817486/intel-gaudi-3-ai-accelerator-white-paper.html)
+- Crescent Island - inference GPU, sampling H2-2026; 160GB LPDDR5X / 350W, no published TFLOPS - [Intel Crescent Island](#intel-crescent-island)
 - [Gaudi2](https://habana.ai/products/gaudi2/) somewhere between A100 and H100 theoretical TFLOPS-wise [spec](https://docs.habana.ai/en/latest/Gaudi_Overview/Gaudi_Architecture.html) - available on Intel cloud. AWS has the older Gaudi1 via [DL1 instances](https://aws.amazon.com/ec2/instance-types/dl1/). It's also available on-premises implementations via Supermicro and WiWynn.
 
 Amazon:
@@ -936,7 +936,11 @@ There are no official TFLOPS information published (and from talking to an Intel
 
 Comparison: supposedly Gaudi2 competes with NVIDIA H100
 
-On what comes after Gaudi: Falcon Shores was to replace it and was canceled. Jaguar Shores is the name that replaced that plan, but as of 2026-08-05 there is nothing to evaluate - Intel has since retired its dedicated AI-accelerators page and its [product index](https://www.intel.com/content/www/us/en/products/details/processors.html) lists only Gaudi and the Data Center GPU Flex Series under AI accelerators, with no occurrence of `Jaguar`, `Falcon` or `Shores` anywhere in it, and the [data center GPU](https://www.intel.com/content/www/us/en/products/details/discrete-gpus/data-center-gpu.html) page doesn't mention them either. So treat Jaguar Shores as a roadmap name with no published specification, no launch date, and no confirmation from Intel - not as a part you can plan around. Gaudi3 remains Intel's current accelerator.
+On what comes after Gaudi: Falcon Shores was to replace it and was canceled. Gaudi3 remains Intel's current training-class accelerator. The announced next data-center GPU is [Crescent Island](#intel-crescent-island).
+
+### Intel Crescent Island
+
+Crescent Island is an inference-oriented Xe3P GPU with customer sampling in H2-2026. Intel's card is 160GB LPDDR5X (ODMs up to 480GB), 350W air-cooled PCIe; Intel has not published TFLOPS. [OCP announcement](https://newsroom.intel.com/artificial-intelligence/intel-to-expand-ai-accelerator-portfolio-with-new-gpu), [Hot Chips 2026](https://newsroom.intel.com/client-computing/intel-outlines-architectures-for-agentic-ai-at-hot-chips-2026)
 
 
 
