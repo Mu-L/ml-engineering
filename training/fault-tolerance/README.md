@@ -167,8 +167,6 @@ This feature can be very useful for those who watch the training charts. If one 
 
 The main use of this feature is around observing training loss spikes and divergences.
 
-(note-to-self: better belongs to instabilities chapter)
-
 ## Prevention
 
 The easiest way to avoid losing training time is to prevent certain types of problems from happening. While one can't prevent a GPU from failing, other than ensuring that adequate cooling is provided, one can certainly ensure that there is enough of disk space remaining for the next few days of training. This is typically done by running scheduled watchdogs that monitor various resources and alert the operator of possible problems long before they occur.
