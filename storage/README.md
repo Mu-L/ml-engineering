@@ -236,6 +236,10 @@ case study: we didn't have a choice and had to use cloud storage for dataloading
 
 In some situations people find good solutions for working with cloud-based datasets, I personally haven't had a smooth experience yet and that's why I advocate local storage. If you found a good streaming solution that can properly resume without losing data and repeating the same data, doesn't require huge local workers then it might work OK.
 
+What makes that work is layout. Streaming pulls whole objects out of cloud object storage - an S3-style bucket, whose API hands back an entire object rather than letting you read a piece of one - so it pays off only when the dataset is already large shards consumed front to back. That is the same shape [mmap vs sequential dataset reads](#mmap-vs-sequential-dataset-reads) found fastest on a shared file system, so a dataset in that shape needs no second copy there - the bucket can feed training directly.
+
+That whole-object interface doubles as a guardrail, since it makes seeking inside an object or memory-mapping one impossible. Mounting the bucket so it appears as an ordinary directory removes the guardrail: the random-access and memory-mapping patterns that section clocked at 50x the sequential read on a network fs (Lustre in that example) start working again, against a backend that was never designed for them.
+
 ## Beware that you're often being sold only 80% of the storage you pay for
 
 There is a subtle problem with distributed shared storage used on compute nodes. Since most physical disks used to build the large file systems are only 0.3-2TB large, any of these physical disks can get full before the combined storage gets full. And thus they require constant rebalancing so that there will be no situation where one disk is 99% full and others are only 50% full. Since rebalancing is a costly operation, like most programming languages' garbage collection, it happens infrequently. And so if you run `df` and it reports 90% full, it's very likely that any of the programs can fail at any given time.
