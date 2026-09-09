@@ -98,6 +98,32 @@ In asynchronous IO the client may submit multiple IO requests one after another 
 - moving around a file using `seek`
 
 
+### mmap vs sequential dataset reads
+
+A dataset that looks like one large file may still end up doing random IO. Hugging Face `datasets` keeps its data in [Apache Arrow](https://huggingface.co/docs/datasets/en/about_arrow) files - a binary columnar format whose on-disk bytes are already laid out the way they will be used in memory, so a row can be read where it lies with no parsing step. That is what makes memory-mapping the default (`load_from_disk`, or `load_dataset` without `keep_in_memory`): the file is mapped into the address space and a row access becomes a page fault instead of a `read` call.
+
+footnote: The resident memory this mapping shows in `top` is not a leak - the OS can reclaim unreferenced pages - see [CPU memory](../compute/cpu-memory/README.md#things-to-know).
+
+If you count `read()` syscalls - with `strace -c`, or by grepping a trace - a mapped dataset looks almost idle. Each mapped run below issued 2 `read` calls for the whole 1GiB; the bytes still moved, but they show up as major page faults and in `/proc/self/io` `read_bytes` instead.
+
+Measured on 2026-09 with `datasets` 4.0.0: 1GiB of text as 32768 rows of 32KiB in three Arrow shards, page cache dropped with `posix_fadvise(..., POSIX_FADV_DONTNEED)` before each run. The first row is the floor - the same three files read start to finish with ordinary `read()` calls of 1MiB each. The other two go through the mapped dataset: `for row in ds`, then `ds[i]` in shuffled order.
+
+| How the 1GiB was read           | Local NVMe | Slowdown | Lustre | Slowdown |
+| :------------------------------ | ---------: | -------: | -----: | -------: |
+| sequential `read()`, whole file |      0.14s |       0% |  1.87s |       0% |
+| mmap, rows in order             |      0.53s |     279% |  3.11s |      66% |
+| mmap, rows shuffled             |      0.78s |     457% |  94.2s |   4_937% |
+
+- The slowdown column is `t / t_sequential - 1` within each file system.
+- [`mmap-io-bench.py`](./mmap-io-bench.py) created this table - edit the two paths at the top of the script before running. In this table the benchmarks filesystem was Lustre.
+
+The three rows are the three ways a pipeline usually touches Arrow shards: read the file through once, walk a mapped dataset in order, or index rows in shuffled training order. Match your target job to a row - the bullets below say when the slowdown is acceptable and when you need a different read path or node-local shards instead of a network fs.
+
+1. **Consuming a shard in order** - checksums, format conversion, one-pass tokenization. Read the file with ordinary `read`s of a MiB or so and do not map it. This is why it's not enough to keep datasets in large files. Additionally every reader has to consume them in large sequential chunks to get high performance.
+2. **`for row in ds` over a mapped dataset** - on local NVMe the mapping costs 279% and still finishes a GiB in half a second, so leave it. On Lustre it costs 66% and every page comes over the network, so copy the shards to node-local disk first if this loop feeds training.
+3. **Shuffled `ds[i]` over a mapped dataset** - ordinary shuffled training. On Lustre this took 94s per GiB, 50x the sequential read of the same bytes. Do not point it at a network file system. Stage the split on node-local NVMe and map it there, or pre-shuffle into epoch shards and read those in order, or stream and shuffle within a buffer. `keep_in_memory=True` removes the faults too, but trades them for RAM that every DataLoader worker pays again.
+
+
 ### Misreported file size
 
 I have noticed some distributed file systems, like Lustre, may report incorrect file sizes if the files got offloaded and haven't been "rehydrated". I haven't seen this problem with Weka or GPFS. A proper distributed file system client should always report the real file size even if the contents of the file have been offloaded, and then automatically re-hydrate the file when it's being read.
