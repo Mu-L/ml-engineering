@@ -384,7 +384,7 @@ And with only 2 ranks, `3g.71gb` instances are actually *faster* than 2 whole GP
 
 ### Spreading the instances over 2 GPUs
 
-Until NVIDIA overcomes the odd [7-instance per GPU limit](#only-7-instances-per-gpu), if you want to do a [3D parallelism](model-parallelism#dppptp), you need at least 8 GPUs or instances. So for a time being we have to use 2 GPUs to get to 8.
+Until NVIDIA overcomes the odd [7-instance per GPU limit](#only-7-instances-per-gpu), if you want to do a [3D parallelism](model-parallelism/README.md#dppptp), you need at least 8 GPUs or instances. So for a time being we have to use 2 GPUs to get to 8.
 
 Everything above keeps the whole emulated world inside one physical GPU. Partitioning 2 GPUs into 4 instances each gives 8 ranks, and the setup plus the benchmark is:
 
