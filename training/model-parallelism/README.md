@@ -411,6 +411,8 @@ Megatron-LM's SP is tightly integrated with its TP. Megatron-LM partitions seque
 
 Paper: [Ring Attention with Blockwise Transformers for Near-Infinite Context](https://arxiv.org/abs/2310.01889)
 
+Also known as Ring Self-Attention (RSA), the name coined in the [Colossal-AI's SP](#colossal-ais-sp) paper that proposed the same ring-style passing of keys and values while the queries stay local. Both names are in common use, so [DistFlashAttn](#distflashattn)'s comparison against Ring Self-Attention refers to this technique.
+
 1. Tensors are sharded along the sequence dimension throughout: (`seq_len // N, d_model`)-shaped
 2. In the attention layers, every GPU starts by computing the part of the attention scores they are able to w/ their available shards.
 3. Simultaneously, the keys and values from other sequence chunks are communicated around.

@@ -41,7 +41,9 @@ Here are a few key storage-related concepts that you likely need to be familiar 
 
 On Linux the local block devices' queue depth is usually pre-configured by the kernel. For example, if you want to check the max queue depth set for `/dev/sda` you can `cat /sys/block/sda/queue/nr_requests`. To see the current queue depth of a local device run `iostat -x` and watch for `aqu-sz` column. (`apt install sysstat` to get `iostat`.)
 
-Typically the more IO requests get buffered the bigger the latency will be, and the better the throughput will be. This is because if a request can't be acted upon immediately it'll prolong the response time as it has to wait before being served. But having multiple requests awaiting to be served in a device's queue would typically speed up the total throughput as there is less waiting time between issuing individual requests.
+A storage device serves many requests at once - an NVMe drive reads from many flash chips simultaneously, a network file system (usually) from many storage servers. Think of those as the device's workers. While there are fewer requests in progress than workers, each request goes straight to an idle worker, so latency stays flat while throughput climbs with every request added. Issue them one at a time instead and the device sits idle after each completion, waiting for the application to come back with the next request.
+
+Once there are more requests than workers, throughput is capped and the surplus gets queued, so latency grows with the depth.
 
 ### Direct vs Buffered IO
 
@@ -122,6 +124,8 @@ The three rows are the three ways a pipeline usually touches Arrow shards: read 
 1. **Consuming a shard in order** - checksums, format conversion, one-pass tokenization. Read the file with ordinary `read`s of a MiB or so and do not map it. This is why it's not enough to keep datasets in large files. Additionally every reader has to consume them in large sequential chunks to get high performance.
 2. **`for row in ds` over a mapped dataset** - on local NVMe the mapping costs 279% and still finishes a GiB in half a second, so leave it. On Lustre it costs 66% and every page comes over the network, so copy the shards to node-local disk first if this loop feeds training.
 3. **Shuffled `ds[i]` over a mapped dataset** - ordinary shuffled training. On Lustre this took 94s per GiB, 50x the sequential read of the same bytes. Do not point it at a network file system. Stage the split on node-local NVMe and map it there, or pre-shuffle into epoch shards and read those in order, or stream and shuffle within a buffer. `keep_in_memory=True` removes the faults too, but trades them for RAM that every DataLoader worker pays again.
+
+footnote: Reading the shards through sequentially before the loop - `cat shard > /dev/null`, or a `cp` - leaves them in the page cache, and the shuffled case then faults against RAM: on Lustre 98.24s from cold became a 1.86s pre-read plus a 1.03s loop. This holds only while the shards fit in the page cache, so it is a remedy for a split that fits in RAM rather than a replacement for staging on local NVMe. The mapping hints do not help and are not reachable through `datasets` in any case - [`MAP_POPULATE`](https://man7.org/linux/man-pages/man2/mmap.2.html) prefaults the whole mapping, [`MADV_SEQUENTIAL`](https://man7.org/linux/man-pages/man2/madvise.2.html) only widens readahead, and `pyarrow`'s `memory_map` passes neither.
 
 
 ### Misreported file size
